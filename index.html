@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>我大東華寒假倒數計時</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #111827;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --accent: #60a5fa;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      height: 100%;
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif;
+      background: radial-gradient(1400px 900px at 75% -15%, #1f2937, transparent),
+                  radial-gradient(1000px 700px at 15% 110%, rgba(37,99,235,0.15), transparent),
+                  var(--bg);
+      color: var(--text);
+    }
+    .container {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px;
+    }
+    .card {
+      width: 100%;
+      max-width: 1480px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      padding: 36px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.45);
+      backdrop-filter: blur(8px);
+    }
+    h1 {
+      margin: 0 0 8px 0;
+      font-size: clamp(22px, 2.2vw, 36px);
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      text-align: center;
+    }
+    .subtitle {
+      text-align: center;
+      color: var(--muted);
+      margin-bottom: 24px;
+      font-size: 15px;
+    }
+    .timer {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 18px;
+    }
+    .unit {
+      background: var(--card);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      padding: 22px 14px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-height: 120px;
+    }
+    .value {
+      font-variant-numeric: tabular-nums; 
+      font-size: clamp(32px, 3.6vw, 64px);
+      font-weight: 800;
+      line-height: 1;
+      color: #f8fafc;
+      font-feature-settings: "tnum" 1, "lnum" 1;
+      white-space: nowrap;
+      display: inline-block;
+    }
+    .label {
+      margin-top: 8px;
+      font-size: 14px;
+      color: var(--muted);
+      letter-spacing: 1px;
+    }
+    .deadline {
+      margin-top: 22px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .done {
+      margin-top: 16px;
+      text-align: center;
+      color: var(--accent);
+      font-weight: 700;
+      display: none;
+    }
+    @media (max-width: 640px) {
+      .timer { grid-template-columns: repeat(2, 1fr); }
+      .unit { min-height: 100px; }
+    }
+    /* 課表樣式 */
+    .section-title {
+      margin: 28px 0 12px 0;
+      font-size: clamp(18px, 2vw, 26px);
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    .schedule {
+      width: 100%;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      background: var(--card);
+    }
+    .schedule table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+    .schedule thead th {
+      position: sticky;
+      top: 0;
+      background: rgba(255,255,255,0.03);
+      backdrop-filter: blur(4px);
+      z-index: 1;
+    }
+    .schedule th,
+    .schedule td {
+      padding: 12px 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      border-right: 1px solid rgba(255,255,255,0.04);
+      font-size: 14px;
+      vertical-align: top;
+      word-wrap: break-word;
+    }
+    .schedule th:last-child,
+    .schedule td:last-child { border-right: none; }
+    .schedule tbody tr:last-child td { border-bottom: none; }
+    .time-col {
+      width: 100px;
+      color: var(--muted);
+      font-weight: 600;
+      white-space: nowrap;
+      text-align: center;
+    }
+    .time-col .n { display: block; font-size: 14px; color: #e5e7eb; font-weight: 800; }
+    .time-col .t { display: block; font-size: 12px; opacity: 0.8; }
+    .course {
+      display: inline-block;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: linear-gradient(180deg, rgba(96,165,250,0.18), rgba(96,165,250,0.10));
+      border: 1px solid rgba(96,165,250,0.35);
+      color: #dbeafe;
+      line-height: 1.25;
+    }
+    .course .name { font-weight: 700; }
+    .course .meta { display: block; margin-top: 4px; color: #bfdbfe; font-size: 12px; }
+    .schedule tbody tr:hover td { background: rgba(255,255,255,0.02); }
+    @media (max-width: 720px) {
+      .time-col { width: 84px; font-size: 12px; }
+      .schedule th, .schedule td { padding: 10px 8px; }
+    }
+
+    /* 1920x1080 桌布優化佈局（大螢幕） */
+    @media (min-width: 1280px) {
+      .card {
+        display: grid;
+        grid-template-columns: 0.55fr 2.45fr;
+        grid-template-rows: auto auto 1fr auto;
+        gap: 24px 28px;
+      }
+      .card > #title { grid-column: 1; grid-row: 1; text-align: left; }
+      .card > .subtitle { grid-column: 1; grid-row: 2; text-align: left; }
+      .card > #grid { grid-column: 1; grid-row: 3; align-self: start; }
+      .card > #done { grid-column: 1; grid-row: 4; text-align: left; }
+      .card > .section-title { grid-column: 2; grid-row: 1; align-self: end; text-align: left; margin-bottom: 0; }
+      .card > .schedule { grid-column: 2; grid-row: 2 / span 3; }
+
+      /* 1080p 完整呈現：取消滾動、縮小字體與間距 */
+      .schedule { max-height: none; overflow: visible; }
+      .schedule th, .schedule td { padding: 8px 8px; font-size: 14px; }
+      .time-col { width: 90px; }
+      .time-col .n { font-size: 14px; }
+      .time-col .t { font-size: 12px; }
+      .course { padding: 6px 8px; border-radius: 9px; }
+      .course .meta { font-size: 12px; }
+      .section-title { font-size: clamp(20px, 2.2vw, 32px); }
+
+      /* 倒數區垂直排列，縮小寬度，讓課表佔更多空間 */
+      #grid.timer { grid-template-columns: 1fr; gap: 6px; max-width: 170px; }
+      .unit { padding: 8px 6px; aspect-ratio: 1 / 1; min-height: auto; border-radius: 10px; }
+      .value { font-size: 30px; }
+      .label { font-size: 10px; margin-top: 4px; }
+    }
+  </style>
+  <script>
+    // 目標時間（台灣時間 UTC+08:00）
+    const TARGET_ISO = '2026-01-12T08:00:00+08:00';
+
+    function pad2(num) {
+      return String(num).padStart(2, '0');
+    }
+
+    function updateCountdown() {
+      const now = new Date();
+      const target = new Date(TARGET_ISO);
+      let diffMs = target.getTime() - now.getTime();
+
+      const doneEl = document.getElementById('done');
+      const gridEl = document.getElementById('grid');
+
+      if (diffMs <= 0) {
+        // 已到時間
+        doneEl.style.display = 'block';
+        gridEl.style.opacity = '0.5';
+        diffMs = 0;
+      }
+
+      const secondsTotal = Math.floor(diffMs / 1000);
+      const days = Math.floor(secondsTotal / (24 * 3600));
+      const hours = Math.floor((secondsTotal % (24 * 3600)) / 3600);
+      const minutes = Math.floor((secondsTotal % 3600) / 60);
+      const seconds = secondsTotal % 60;
+
+      // 固定寬度避免跳動：天數可能為 1~4 位數，其他為 2 位數
+      const daysText = String(days);
+      const daysPadded = daysText.padStart(4, '\u2007'); // figure space for alignment
+      document.getElementById('days').textContent = daysPadded;
+      document.getElementById('hours').textContent = pad2(hours);
+      document.getElementById('minutes').textContent = pad2(minutes);
+      document.getElementById('seconds').textContent = pad2(seconds);
+    }
+
+    function initCountdown() {
+      updateCountdown();
+      setInterval(updateCountdown, 1000);
+    }
+
+    document.addEventListener('DOMContentLoaded', initCountdown);
+  </script>
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#0f172a">
+</head>
+<body>
+  <div class="container">
+    <main class="card" role="main" aria-labelledby="title">
+      <h1 id="title">我大東華寒假倒數計時</h1>
+      <div class="subtitle">目標時間：2026/01/12 08:00（UTC+08:00）</div>
+      <section id="grid" class="timer" aria-label="倒數計時">
+        <div class="unit" aria-label="天數">
+          <div id="days" class="value" aria-live="polite" style="min-width: 6ch; text-align: center;">0</div>
+          <div class="label">天</div>
+        </div>
+        <div class="unit" aria-label="小時">
+          <div id="hours" class="value" aria-live="polite" style="min-width: 2ch; text-align: center;">00</div>
+          <div class="label">小時</div>
+        </div>
+        <div class="unit" aria-label="分鐘">
+          <div id="minutes" class="value" aria-live="polite" style="min-width: 2ch; text-align: center;">00</div>
+          <div class="label">分鐘</div>
+        </div>
+        <div class="unit" aria-label="秒數">
+          <div id="seconds" class="value" aria-live="polite" style="min-width: 2ch; text-align: center;">00</div>
+          <div class="label">秒</div>
+        </div>
+      </section>
+      <div id="done" class="done">時間到！寒假開始🎉</div>
+
+      <h2 class="section-title" aria-label="課表">本學期課表</h2>
+      <div class="schedule" role="region" aria-label="課表清單">
+        <table aria-describedby="課表">
+          <thead>
+            <tr>
+              <th class="time-col">節次 / 時間</th>
+              <th>星期一</th>
+              <th>星期二</th>
+              <th>星期三</th>
+              <th>星期四</th>
+              <th>星期五</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="time-col"><span class="n">1</span><span class="t">(06:10~07:00)</span></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td class="time-col"><span class="n">2</span><span class="t">(07:10~08:00)</span></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td class="time-col"><span class="n">3</span><span class="t">(08:10~09:00)</span></td>
+              <td>
+                <span class="course">
+                  <span class="name">(校核心)體育(一)AG</span>
+                  <span class="meta">陳孝夫 · A區高爾夫球場/ D區體能訓練室</span>
+                </span>
+              </td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td class="time-col"><span class="n">4</span><span class="t">(09:10~10:00)</span></td>
+              <td>
+                <span class="course">
+                  <span class="name">(校核心)體育(一)AG</span>
+                  <span class="meta">陳孝夫 · A區高爾夫球場/ D區體能訓練室</span>
+                </span>
+              </td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+            
+            <tr>
+              <td class="time-col"><span class="n">5</span><span class="t">(10:10~11:00)</span></td>
+              <td></td>
+              <td>
+                <span class="course">
+                  <span class="name">(學一)普通物理(一)AH</span>
+                  <span class="meta">紀信昌 · 理工二館C403</span>
+                </span>
+              </td>
+              <td>
+                <span class="course">
+                  <span class="name">(學一)程式設計實驗(一)</span>
+                  <span class="meta">楊舜博 · 理工二館B204</span>
+                </span>
+              </td>
+              <td></td>
+              <td>
+                <span class="course">
+                  <span class="name">(學一)計算機概論AB</span>
+                  <span class="meta">方文杰 · 理工二館A337</span>
+                </span>
+              </td>
+            </tr>
+            <tr>
+              <td class="time-col"><span class="n">6</span><span class="t">(11:10~12:00)</span></td>
+              <td></td>
+              <td>
+                <span class="course">
+                  <span class="name">(學一)普通物理(一)AH</span>
+                  <span class="meta">紀信昌 · 理工二館C403</span>
+                </span>
+              </td>
+              <td>
+                <span class="course">
+                  <span class="name">(學一)程式設計實驗(一)</span>
+                  <span class="meta">楊舜博 · 理工二館B204</span>
+                </span>
+              </td>
+              <td>
+                <span class="course">
+                  <span class="name">(學一)普通物理(一)AH</span>
+                  <span class="meta">紀信昌 · 理工二館C403</span>
+                </span>
+              </td>
+              <td>
+                <span class="course">
+                  <span class="name">(學一)計算機概論AB</span>
+                  <span class="meta">方文杰 · 理工二館A337</span>
+                </span>
+              </td>
+            </tr>
+            <tr>
+              <td class="time-col"><span class="n">7</span><span class="t">(12:10~13:00)</span></td>
+              <td></td>
+              <td></td>
+              <td>
+                <span class="course">
+                  <span class="name">(學一)程式設計實驗(一)</span>
+                  <span class="meta">楊舜博 · 理工二館B204</span>
+                </span>
+              </td>
+              <td></td>
+              <td>
+                <span class="course">
+                  <span class="name">(學一)計算機概論AB</span>
+                  <span class="meta">方文杰 · 理工二館A337</span>
+                </span>
+              </td>
+            </tr>
+            <tr>
+              <td class="time-col"><span class="n">8</span><span class="t">(13:10~14:00)</span></td>
+              <td></td>
+              <td>
+                <span class="course">
+                  <span class="name">(學一)微積分(一)</span>
+                  <span class="meta">胡鍇 · 理工一館D340</span>
+                </span>
+              </td>
+              <td></td>
+              <td></td>
+              <td>
+                <span class="course">
+                  <span class="name">(校核心)性別與法律AB</span>
+                  <span class="meta">蔣駿 · 人社二館B009</span>
+                </span>
+              </td>
+            </tr>
+            <tr>
+              <td class="time-col"><span class="n">9</span><span class="t">(14:10~15:00)</span></td>
+              <td>
+                <span class="course">
+                  <span class="name">(校核心)認識宇宙AB</span>
+                  <span class="meta">葉振斌/李大興/紀信昌 · 理工一館A108</span>
+                </span>
+              </td>
+              <td>
+                <span class="course">
+                  <span class="name">(學一)程式設計（一）AC</span>
+                  <span class="meta">楊舜博 · 理工二館C303</span>
+                </span>
+              </td>
+              <td>
+                <span class="course">
+                  <span class="name">(學一)微積分(一)</span>
+                  <span class="meta">胡鍇 · 理工一館D340</span>
+                </span>
+              </td>
+              <td></td>
+              <td>
+                <span class="course">
+                  <span class="name">(校核心)性別與法律AB</span>
+                  <span class="meta">蔣駿 · 人社二館B009</span>
+                </span>
+              </td>
+            </tr>
+            <tr>
+              <td class="time-col"><span class="n">10</span><span class="t">(15:10~16:00)</span></td>
+              <td>
+                <span class="course">
+                  <span class="name">(校核心)認識宇宙AB</span>
+                  <span class="meta">葉振斌/李大興/紀信昌 · 理工一館A108</span>
+                </span>
+              </td>
+              <td>
+                <span class="course">
+                  <span class="name">(學一)程式設計（一）AC</span>
+                  <span class="meta">楊舜博 · 理工二館C303</span>
+                </span>
+              </td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td class="time-col"><span class="n">11</span><span class="t">(16:10~17:00)</span></td>
+              <td></td>
+              <td>
+                <span class="course">
+                  <span class="name">(學一)程式設計（一）AC</span>
+                  <span class="meta">楊舜博 · 理工二館C303</span>
+                </span>
+              </td>
+              <td>
+                <span class="course">
+                  <span class="name">(學一)微積分(一)</span>
+                  <span class="meta">胡鍇 · 理工一館D340</span>
+                </span>
+              </td>
+              <td></td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+  
+</body>
+</html>
+
+
+
