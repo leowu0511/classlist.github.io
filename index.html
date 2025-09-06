@@ -230,8 +230,7 @@
 
       // 固定寬度避免跳動：天數可能為 1~4 位數，其他為 2 位數
       const daysText = String(days);
-      const daysPadded = daysText.padStart(4, '\u2007'); // figure space for alignment
-      document.getElementById('days').textContent = daysPadded;
+      document.getElementById('days').textContent = daysText;
       document.getElementById('hours').textContent = pad2(hours);
       document.getElementById('minutes').textContent = pad2(minutes);
       document.getElementById('seconds').textContent = pad2(seconds);
@@ -254,7 +253,7 @@
       <div class="subtitle">目標時間：2026/01/12 08:00（UTC+08:00）</div>
       <section id="grid" class="timer" aria-label="倒數計時">
         <div class="unit" aria-label="天數">
-          <div id="days" class="value" aria-live="polite" style="min-width: 6ch; text-align: center;">0</div>
+          <div id="days" class="value" aria-live="polite" style="min-width: 4ch; text-align: center; display: flex; align-items: center; justify-content: center;">0</div>
           <div class="label">天</div>
         </div>
         <div class="unit" aria-label="小時">
